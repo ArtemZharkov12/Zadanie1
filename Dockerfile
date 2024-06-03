@@ -1,42 +1,42 @@
 # syntax=docker/dockerfile:1.2
 
-# Stage 1: Base Image with Python
-# Use Python 3.9 on Alpine Linux as the base image for the build stage
+# Etap 1: Obraz bazowy z Pythonem
+# Użyj Pythona 3.9 na Alpine Linux jako obraz bazowy dla etapu budowy
 FROM python:3.9-alpine AS base
 
-# Set working directory inside the container
+# Ustaw katalog roboczy w kontenerze
 WORKDIR /app
 
-# Install git for cloning the repository
+# Zainstaluj git do klonowania repozytorium
 RUN apk add --no-cache git
 
-# Clone the repository containing the application code
+# Sklonuj repozytorium zawierające kod aplikacji
 RUN --mount=type=cache,target=/root/.npm git clone https://github.com/ArtemZharkov12/Zadanie1.git .
 
-# Copy the requirements file and install dependencies with cache optimization
+# Skopiuj plik wymagań i zainstaluj zależności z optymalizacją pamięci podręcznej
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache \
-    pip install -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
-# Stage 2: Final Image with Application Code
-# Use Python 3.9 on Alpine Linux as the base image for the final stage
+# Etap 2: Ostateczny obraz z kodem aplikacji
+# Użyj Pythona 3.9 na Alpine Linux jako obraz bazowy dla etapu końcowego
 FROM python:3.9-alpine AS final
 
-# Set working directory inside the container
+# Ustaw katalog roboczy w kontenerze
 WORKDIR /app
 
-# Copy the dependencies installed in the build stage to the final image
+# Skopiuj zainstalowane zależności z etapu budowy do ostatecznego obrazu
 COPY --from=base /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=base /usr/local/bin /usr/local/bin
 
-# Copy the application code from the build stage to the final image
+# Skopiuj kod aplikacji z etapu budowy do ostatecznego obrazu
 COPY server.py .
 
-# Expose the port on which the server will run
+# Udostępnij port, na którym będzie działać serwer
 EXPOSE 3000
 
-# Add a healthcheck to ensure the server is running correctly
+# Dodaj mechanizm sprawdzający poprawność działania serwera
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Run the server using the Python interpreter
+# Uruchom serwer przy użyciu interpretera Pythona
 CMD ["python", "server.py"]
