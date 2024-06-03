@@ -1,42 +1,42 @@
 # syntax=docker/dockerfile:1.2
 
-# Etap 1: Obraz bazowy z Pythonem
-# Użyj Pythona 3.9 na Alpine Linux jako obraz bazowy dla etapu budowy
-FROM python:3.9-alpine AS base
+# Stage 1: Базовый образ с Python
+# Используем Python 3.11 на Alpine Linux в качестве базового образа для этапа сборки
+FROM python:3.11-alpine AS base
 
-# Ustaw katalog roboczy w kontenerze
+# Устанавливаем рабочий каталог внутри контейнера
 WORKDIR /app
 
-# Zainstaluj git do klonowania repozytorium
+# Устанавливаем git для клонирования репозитория
 RUN apk add --no-cache git
 
-# Sklonuj repozytorium zawierające kod aplikacji
+# Клонируем репозиторий с кодом приложения
 RUN --mount=type=cache,target=/root/.npm git clone https://github.com/ArtemZharkov12/Zadanie1.git .
 
-# Skopiuj plik wymagań i zainstaluj zależności z optymalizacją pamięci podręcznej
+# Копируем файл requirements и устанавливаем зависимости с оптимизацией кэша
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache \
-    pip install --no-cache-dir -r requirements.txt
+    pip install -r requirements.txt
 
-# Etap 2: Ostateczny obraz z kodem aplikacji
-# Użyj Pythona 3.9 na Alpine Linux jako obraz bazowy dla etapu końcowego
-FROM python:3.9-alpine AS final
+# Stage 2: Финальный образ с кодом приложения
+# Используем Python 3.11 на Alpine Linux в качестве базового образа для финального этапа
+FROM python:3.11-alpine AS final
 
-# Ustaw katalog roboczy w kontenerze
+# Устанавливаем рабочий каталог внутри контейнера
 WORKDIR /app
 
-# Skopiuj zainstalowane zależności z etapu budowy do ostatecznego obrazu
-COPY --from=base /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+# Копируем зависимости, установленные на этапе сборки, в финальный образ
+COPY --from=base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=base /usr/local/bin /usr/local/bin
 
-# Skopiuj kod aplikacji z etapu budowy do ostatecznego obrazu
+# Копируем код приложения из этапа сборки в финальный образ
 COPY server.py .
 
-# Udostępnij port, na którym będzie działać serwer
+# Открываем порт, на котором будет работать сервер
 EXPOSE 3000
 
-# Dodaj mechanizm sprawdzający poprawność działania serwera
+# Добавляем healthcheck для проверки корректной работы сервера
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Uruchom serwer przy użyciu interpretera Pythona
+# Запускаем сервер с помощью интерпретатора Python
 CMD ["python", "server.py"]
