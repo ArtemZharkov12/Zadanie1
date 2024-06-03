@@ -7,10 +7,10 @@ FROM python:3.11-alpine AS base
 WORKDIR /app
 
 # Instalujemy Git i необходимые пакеты для сборки зависимостей
-RUN apk add --no-cache git build-base
+RUN apk add --no-cache git
 
 # Копируем requirements.txt и устанавливаем зависимости с использованием кэша
-COPY requirements.txt "flask==2.0.1 requests==2.25.1"
+COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache \
     pip install --no-cache-dir -r requirements.txt
 
