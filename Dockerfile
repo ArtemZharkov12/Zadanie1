@@ -10,10 +10,10 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 # Копируем requirements.txt и устанавливаем зависимости с использованием кэша
-COPY requirements.txt .
+
 RUN --mount=type=cache,target=/root/.cache \
     pip install --no-cache-dir -r requirements.txt
-
+COPY requirements.txt .
 # Klonujemy repozytorium z kodem aplikacji
 RUN --mount=type=cache,target=/root/.npm git clone https://github.com/ArtemZharkov12/Zadanie1.git .
 
