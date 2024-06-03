@@ -1,42 +1,40 @@
 # syntax=docker/dockerfile:1.2
 
-# Stage 1: Базовый образ с Python
-# Используем Python 3.11 на Alpine Linux в качестве базового образа для этапа сборки
+# Etap 1: Bazowy obraz z Pythonem
 FROM python:3.11-alpine AS base
 
-# Устанавливаем рабочий каталог внутри контейнера
+# Ustawiamy katalog roboczy wewnątrz kontenera na /app
 WORKDIR /app
 
-# Устанавливаем git для клонирования репозитория
-RUN apk add --no-cache git
+# Instalujemy Git i необходимые пакеты для сборки зависимостей
+RUN apk add --no-cache git build-base
 
-# Клонируем репозиторий с кодом приложения
+# Копируем requirements.txt и устанавливаем зависимости с использованием кэша
+COPY requirements.txt "flask==2.0.1 requests==2.25.1"
+RUN --mount=type=cache,target=/root/.cache \
+    pip install --no-cache-dir -r requirements.txt
+
+# Klonujemy repozytorium z kodem aplikacji
 RUN --mount=type=cache,target=/root/.npm git clone https://github.com/ArtemZharkov12/Zadanie1.git .
 
-# Копируем файл requirements и устанавливаем зависимости с оптимизацией кэша
-COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache \
-    pip install -r requirements.txt
-
-# Stage 2: Финальный образ с кодом приложения
-# Используем Python 3.11 на Alpine Linux в качестве базового образа для финального этапа
+# Etap 2: Końcowy obraz z kodem aplikacji
 FROM python:3.11-alpine AS final
 
-# Устанавливаем рабочий каталог внутри контейнера
+# Ustawiamy katalog roboczy wewnątrz kontenera na /app
 WORKDIR /app
 
-# Копируем зависимости, установленные на этапе сборки, в финальный образ
+# Копируем зависимости, установленные на этапе сборки
 COPY --from=base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=base /usr/local/bin /usr/local/bin
 
-# Копируем код приложения из этапа сборки в финальный образ
-COPY server.py .
+# Копируем код приложения
+COPY --from=base /app /app
 
-# Открываем порт, на котором будет работать сервер
+# Открываем порт 3000, на którym будет работать сервер
 EXPOSE 3000
 
-# Добавляем healthcheck для проверки корректной работы сервера
+# Добавляем проверку состояния (health check)
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Запускаем сервер с помощью интерпретатора Python
+# Запускаем сервер с использованием интерпретатора Python
 CMD ["python", "server.py"]
