@@ -1,41 +1,41 @@
 # syntax=docker/dockerfile:1.2
 
-# Stage 1: Base Image with Node.js
-FROM node:14 AS base
+# Etap 1: Bazowy obraz z Pythonem
+FROM python:3.11-alpine AS base
 
-# Set working directory inside the container
+# Ustawiamy katalog roboczy wewnątrz kontenera na /app
 WORKDIR /app
 
-# Install git for cloning the repository
-RUN apt-get update && apt-get install -y git
+# Instalujemy Git i aktualizujemy pip do najnowszej wersji
+RUN apk add --no-cache git \
+    && pip install --no-cache-dir --upgrade pip
 
-# Clone the repository containing the application code
-RUN git clone https://github.com/ArtemZharkov12/Zadanie1.git .
+# Klonujemy repozytorium z kodem aplikacji
+RUN --mount=type=cache,target=/root/.npm git clone https://github.com/artemzharkov12/Zadanie1.git .
 
-# Copy the package.json and package-lock.json (if available)
-COPY package.json ./
-COPY package-lock.json ./
+# Kopiujemy plik requirements.txt i instalujemy zależności z optymalizacją pamięci podręcznej
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache \
+    pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies with cache optimization
-RUN npm install
+# Etap 2: Końcowy obraz z kodem aplikacji
+FROM python:3.11-alpine AS final
 
-# Build the application
-RUN npm run build
-
-# Stage 2: Final Image with Node.js and Application Code
-FROM node:14 AS final
-
-# Set working directory inside the container
+# Ustawiamy katalog roboczy wewnątrz kontenera na /app
 WORKDIR /app
 
-# Copy the built application from the previous stage
-COPY --from=base /app .
+# Kopiujemy zależności zainstalowane na etapie budowy do obrazu końcowego
+COPY --from=base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=base /usr/local/bin /usr/local/bin
 
-# Expose the port on which the server will run
+# Kopiujemy kod aplikacji (server.py) z etapu budowy do obrazu końcowego
+COPY server.py .
+
+# Otwieramy port 3000, na którym będzie działać serwer
 EXPOSE 3000
 
-# Healthcheck to ensure the server is running correctly
+# Dodajemy sprawdzanie stanu zdrowia (health check) w celu weryfikacji poprawności działania serwera
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Run the server using Node.js
-CMD ["node", "server.js"]
+# Uruchamiamy serwer za pomocą interpretera Pythona
+CMD ["python", "server.py"]
