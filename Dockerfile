@@ -1,41 +1,41 @@
 # syntax=docker/dockerfile:1.2
 
-# Etap 1: Bazowy obraz z Pythonem
-FROM python:3.11-alpine AS base
+# Stage 1: Base Image with Python
+# Use Python 3.9 on the official Debian-based Python image as the base image for the build stage
+FROM python:3.9-slim-buster AS base
 
-# Ustawiamy katalog roboczy wewnątrz kontenera na /app
+# Set working directory inside the container
 WORKDIR /app
 
-# Instalujemy Git i aktualizujemy pip do najnowszej wersji
-RUN apk add --no-cache git \
-    && pip install --no-cache-dir --upgrade pip
+# Install git for cloning the repository
+RUN apt-get update && apt-get install -y git --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
-# Klonujemy repozytorium z kodem aplikacji
-RUN --mount=type=cache,target=/root/.npm git clone https://github.com/ArtemZharkov12/Zadanie1.git .
+# Clone the repository containing the application code
+RUN git clone https://github.com/ArtemZharkov12/Zadanie1.git .
 
-# Kopiujemy plik requirements.txt i instalujemy zależności z optymalizacją pamięci podręcznej
+# Copy the requirements file and install dependencies with cache optimization
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Etap 2: Końcowy obraz z kodem aplikacji
-FROM python:3.11-alpine AS final
+# Stage 2: Final Image with Application Code
+# Use Python 3.9 on the official Debian-based Python image as the base image for the final stage
+FROM python:3.9-slim-buster AS final
 
-# Ustawiamy katalog roboczy wewnątrz kontenera na /app
+# Set working directory inside the container
 WORKDIR /app
 
-# Kopiujemy zależności zainstalowane na etapie budowy do obrazu końcowego
-COPY --from=base /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+# Copy the dependencies installed in the build stage to the final image
+COPY --from=base /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
 COPY --from=base /usr/local/bin /usr/local/bin
 
-# Kopiujemy kod aplikacji (server.py) z etapu budowy do obrazu końcowego
+# Copy the application code from the build stage to the final image
 COPY server.py .
 
-# Otwieramy port 3000, na którym będzie działać serwer
+# Expose the port on which the server will run
 EXPOSE 3000
 
-# Dodajemy sprawdzanie stanu zdrowia (health check) w celu weryfikacji poprawności działania serwera
+# Add a healthcheck to ensure the server is running correctly
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Uruchamiamy serwer za pomocą interpretera Pythona
+# Run the server using the Python interpreter
 CMD ["python", "server.py"]
