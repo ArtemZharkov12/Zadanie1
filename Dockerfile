@@ -1,39 +1,34 @@
-# Stage 1: Base Image with Python
-# Use Python 3.9 on Ubuntu as the base image for the build stage
-FROM python:3.9 AS base
+# syntax=docker/dockerfile:1.2
 
-# Set working directory inside the container
+# Etap 1: Obraz bazowy z Pythonem
+FROM python:3.9-slim AS base
+
+# Ustawienie katalogu roboczego w kontenerze
 WORKDIR /app
 
-# Install git for cloning the repository
-RUN apt-get update && apt-get install -y git --no-install-recommends && rm -rf /var/lib/apt/lists/*
+# Instalacja zależności systemowych
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+ && rm -rf /var/lib/apt/lists/*
 
-# Clone the repository containing the application code
-RUN git clone https://github.com/ArtemZharkov12/Zadanie1.git .
-
-# Copy the requirements file and install dependencies with cache optimization
+# Skopiowanie plików aplikacji
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Stage 2: Final Image with Application Code
-# Use Python 3.9 on Ubuntu as the base image for the final stage
-FROM python:3.9 AS final
+# Etap 2: Ostateczny obraz z kodem aplikacji
+FROM python:3.9-slim AS final
 
-# Set working directory inside the container
+# Ustawienie katalogu roboczego w kontenerze
 WORKDIR /app
 
-# Copy the dependencies installed in the build stage to the final image
-COPY --from=base /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY --from=base /usr/local/bin /usr/local/bin
+# Skopiowanie zależności z obrazu bazowego
+COPY --from=base /app .
 
-# Copy the application code from the build stage to the final image
-COPY server.py .
-
-# Expose the port on which the server will run
+# Odsłuch na porcie, na którym działa serwer
 EXPOSE 3000
 
-# Add a healthcheck to ensure the server is running correctly
+# Zdrowotność aplikacji
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Run the server using the Python interpreter
+# Uruchomienie serwera przy użyciu interpretera Pythona
 CMD ["python", "server.py"]
