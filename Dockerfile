@@ -1,47 +1,41 @@
 # syntax=docker/dockerfile:1.2
 
-# Этап 1: Установка зависимостей с использованием Poetry
-FROM python:3.9-slim AS builder
+# Stage 1: Base Image with Node.js
+FROM node:14 AS base
 
-# Установка необходимых инструментов
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
- && rm -rf /var/lib/apt/lists/*
-
-# Установка Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-
-# Добавление Poetry в PATH
-ENV PATH="/root/.local/bin:$PATH"
-
-# Установка рабочего каталога
+# Set working directory inside the container
 WORKDIR /app
 
-# Копирование файлов для установки зависимостей
-COPY pyproject.toml poetry.lock ./
+# Install git for cloning the repository
+RUN apt-get update && apt-get install -y git
 
-# Установка зависимостей без установки самого проекта
-RUN poetry install --no-root
+# Clone the repository containing the application code
+RUN git clone https://github.com/ArtemZharkov12/Zadanie1.git .
 
-# Этап 2: Финальный образ
-FROM python:3.9-slim
+# Copy the package.json and package-lock.json (if available)
+COPY package.json ./
+COPY package-lock.json ./
 
-# Копирование зависимостей из builder образа
-COPY --from=builder /root/.local /root/.local
-ENV PATH="/root/.local/bin:$PATH"
+# Install dependencies with cache optimization
+RUN npm install
 
-# Установка рабочего каталога
+# Build the application
+RUN npm run build
+
+# Stage 2: Final Image with Node.js and Application Code
+FROM node:14 AS final
+
+# Set working directory inside the container
 WORKDIR /app
 
-# Копирование файлов приложения
-COPY requirements.txt .
+# Copy the built application from the previous stage
+COPY --from=base /app .
 
-# Открытие порта, на котором работает сервер
+# Expose the port on which the server will run
 EXPOSE 3000
 
-# Проверка состояния приложения
+# Healthcheck to ensure the server is running correctly
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Запуск сервера с использованием интерпретатора Python
-CMD ["python", "server.py"]
+# Run the server using Node.js
+CMD ["node", "server.js"]
