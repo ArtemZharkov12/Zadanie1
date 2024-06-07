@@ -7,8 +7,10 @@ FROM debian:bullseye-slim AS base
 # Set working directory inside the container
 WORKDIR /app
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
+# Replace the default Debian mirror with a different one (for example, a mirror from your region)
+RUN sed -i 's|http://deb.debian.org/debian|http://ftp.us.debian.org/debian|g' /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y \
     git \
     wget \
     build-essential \
@@ -18,7 +20,8 @@ RUN apt-get update && apt-get install -y \
     python3.9-venv \
     python3.9-dev \
     python3-pip \
-    --no-install-recommends && rm -rf /var/lib/apt/lists/*
+    --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # Clone the repository containing the application code
 RUN git clone https://github.com/ArtemZharkov12/Zadanie1.git .
