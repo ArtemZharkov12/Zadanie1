@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.2
 
 # Stage 1: Base Image with Python
-# Use Python 3.9 on the official Debian-based Python image as the base image for the build stage
-FROM python:3.9-slim-buster AS base
+# Use Python 3.9 on Ubuntu as the base image for the build stage
+FROM python:3.9 AS base
 
 # Set working directory inside the container
 WORKDIR /app
@@ -18,8 +18,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Final Image with Application Code
-# Use Python 3.9 on the official Debian-based Python image as the base image for the final stage
-FROM python:3.9-slim-buster AS final
+# Use Python 3.9 on Ubuntu as the base image for the final stage
+FROM python:3.9 AS final
 
 # Set working directory inside the container
 WORKDIR /app
