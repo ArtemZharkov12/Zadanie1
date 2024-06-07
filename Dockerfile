@@ -1,34 +1,47 @@
 # syntax=docker/dockerfile:1.2
 
-# Etap 1: Obraz bazowy z Pythonem
-FROM python:3.9-slim AS base
+# Этап 1: Установка зависимостей с использованием Poetry
+FROM python:3.9-slim AS builder
 
-# Ustawienie katalogu roboczego w kontenerze
-WORKDIR /app
-
-# Instalacja zależności systemowych
+# Установка необходимых инструментов
 RUN apt-get update && apt-get install -y \
     git \
-    wget \
+    curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Skopiowanie plików aplikacji
-COPY requirements.txt .
+# Установка Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# Etap 2: Ostateczny obraz z kodem aplikacji
-FROM python:3.9-slim AS final
+# Добавление Poetry в PATH
+ENV PATH="/root/.local/bin:$PATH"
 
-# Ustawienie katalogu roboczego w kontenerze
+# Установка рабочего каталога
 WORKDIR /app
 
-# Skopiowanie zależności z obrazu bazowego
-COPY --from=base /app .
+# Копирование файлов для установки зависимостей
+COPY pyproject.toml poetry.lock ./
 
-# Odsłuch na porcie, na którym działa serwer
+# Установка зависимостей без установки самого проекта
+RUN poetry install --no-root
+
+# Этап 2: Финальный образ
+FROM python:3.9-slim
+
+# Копирование зависимостей из builder образа
+COPY --from=builder /root/.local /root/.local
+ENV PATH="/root/.local/bin:$PATH"
+
+# Установка рабочего каталога
+WORKDIR /app
+
+# Копирование файлов приложения
+COPY requirements.txt .
+
+# Открытие порта, на котором работает сервер
 EXPOSE 3000
 
-# Zdrowotność aplikacji
+# Проверка состояния приложения
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost:3000 || exit 1
 
-# Uruchomienie serwera przy użyciu interpretera Pythona
+# Запуск сервера с использованием интерпретатора Python
 CMD ["python", "server.py"]
